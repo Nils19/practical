@@ -128,3 +128,58 @@ dmypy.json
 # Pyre type checker
 .pyre/
 .idea
+
+# Data directories (too large for git)
+**/DATA/
+**/data/
+**/datasets/
+gnn-comparison/DATA/
+tf-gnn-samples/data/
+*.pt
+*.pth
+*.h5
+*.hdf5
+*.npz
+*.npy
+
+# Container images
+*.sqsh
+*.sif
+*.img
+
+# Results and logs
+RESULTS/
+results/
+nils_results/
+varmisuse_logs/
+qm9_logs/
+*.out
+*.err
+*.log
+*_results.txt
+*_results_*.txt
+batch_results_*.txt
+
+# Job output files
+*_exp_*.out
+*_exp_*.err
+*_*.out
+*_*.err
+
+# Trained models and checkpoints
+trained_models/
+checkpoints/
+*.ckpt
+*.pkl
+*.pickle
+
+# Temporary files
+temp/
+tmp/
+*.tmp
+*.swp
+*.swo
+*~
+
+# Large experiment files
+*_experiment.txt
