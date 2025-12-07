@@ -39,6 +39,28 @@ def run(args):
         for seed in range(1, 1 + num_seeds):
             logfile = os.path.join(target_dir, "%s_seed%i.txt" % (model.lower(), seed))
             test_logfile = os.path.join(target_dir, "%s_seed%i-testonly.txt" % (model.lower(), seed))
+            
+            # Check if this run already completed
+            if os.path.exists(logfile) and os.path.exists(test_logfile):
+                with open(logfile, "r") as check_fh:
+                    content = check_fh.read()
+                    if "Metrics:" in content:
+                        print(f"Skipping {model} seed{seed} - already completed")
+                        # Parse existing results
+                        for line in content.split('\n'):
+                            valid_res_match = VALID_RES_RE.search(line)
+                            test_res_match = TEST_RES_RE.search(line)
+                            if valid_res_match is not None:
+                                valid_accs.append(float(valid_res_match.groups()[0]))
+                            elif test_res_match is not None:
+                                test_accs.append(float(test_res_match.groups()[0]))
+                        with open(test_logfile, "r") as test_fh:
+                            for line in test_fh.readlines():
+                                test_res_match = TEST_RES_RE.search(line)
+                                if test_res_match is not None:
+                                    testonly_accs.append(float(test_res_match.groups()[0]))
+                        continue
+            
             with open(logfile, "w") as log_fh:
                 subprocess.check_call(["python",
                                        "train.py",

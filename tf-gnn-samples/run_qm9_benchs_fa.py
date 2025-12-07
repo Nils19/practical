@@ -35,6 +35,23 @@ def run(args):
         for task_id in range(len(TASKS)):
             for seed in range(1, 1 + num_seeds):
                 logfile = os.path.join(target_dir, "%s_task%i_seed%i.txt" % (model, task_id, seed))
+                
+                # Skip if already completed (check for "Metrics:" in existing log)
+                if os.path.exists(logfile):
+                    with open(logfile, "r") as check_fh:
+                        content = check_fh.read()
+                        if "Metrics:" in content and "MAEs:" in content:
+                            print(f"Skipping {model} task{task_id} seed{seed} - already completed")
+                            # Parse existing results
+                            for line in content.split('\n'):
+                                time_match = TIME_RE.search(line)
+                                res_match = TEST_RES_RE.search(line)
+                                if time_match is not None:
+                                    results[model][task_id]["times"].append(int(time_match.groups()[0]))
+                                elif res_match is not None:
+                                    results[model][task_id]["test_errors"].append(float(res_match.groups()[1]))
+                            continue
+                
                 with open(logfile, "w") as log_fh:
                     subprocess.check_call(["python",
                                            "train.py",

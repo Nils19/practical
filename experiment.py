@@ -32,7 +32,13 @@ class Experiment():
         torch.manual_seed(seed)
         np.random.seed(seed)
         random.seed(seed)
+        if torch.cuda.is_available():
+            torch.cuda.manual_seed(seed)
+            torch.cuda.manual_seed_all(seed)
+            torch.backends.cudnn.deterministic = True
+            torch.backends.cudnn.benchmark = False
 
+        self.seed = seed
         self.X_train, self.X_test, dim0, out_dim, self.criterion = \
             self.task.get_dataset(self.depth, self.train_fraction)
 
@@ -65,10 +71,15 @@ class Experiment():
         best_train_acc = 0.0
         best_epoch = 0
         epochs_no_improve = 0
+        def worker_init_fn(worker_id):
+            np.random.seed(self.seed + worker_id)
+            random.seed(self.seed + worker_id)
+
         for epoch in range(1, (self.max_epochs // self.eval_every) + 1):
             self.model.train()
             loader = DataLoader(self.X_train * self.eval_every, batch_size=self.batch_size, shuffle=True,
-                                pin_memory=True, num_workers=self.loader_workers)
+                                pin_memory=True, num_workers=self.loader_workers,
+                                worker_init_fn=worker_init_fn if self.loader_workers > 0 else None)
 
             total_loss = 0
             total_num_examples = 0
@@ -134,8 +145,12 @@ class Experiment():
     def eval(self):
         self.model.eval()
         with torch.no_grad():
+            def worker_init_fn(worker_id):
+                np.random.seed(self.seed + worker_id)
+                random.seed(self.seed + worker_id)
             loader = DataLoader(self.X_test, batch_size=self.batch_size, shuffle=False,
-                                pin_memory=True, num_workers=self.loader_workers)
+                                pin_memory=True, num_workers=self.loader_workers,
+                                worker_init_fn=worker_init_fn if self.loader_workers > 0 else None)
 
             total_correct = 0
             total_examples = 0

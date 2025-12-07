@@ -27,7 +27,7 @@ if __name__ == '__main__':
     task = Task.NEIGHBORS_MATCH
     gnn_type = GNN_TYPE.GAT
     stopping_criterion = STOP.TRAIN
-    min_depth = 2
+    min_depth = 4
     max_depth = 8
 
     results_all_depths = {}
@@ -35,7 +35,7 @@ if __name__ == '__main__':
         num_layers = depth + 1
         args = main.get_fake_args(task=task, depth=depth, num_layers=num_layers, loader_workers=7,
                                   type=gnn_type, stop=stopping_criterion,
-                                  no_activation=True, no_residual=False)
+                                  no_activation=False, no_residual=False)
         if depth in override_params:
             for key, value in AttrDict(override_params[depth]).items():
                 args[key] = value

@@ -141,6 +141,8 @@ tf-gnn-samples/data/
 *.hdf5
 *.npz
 *.npy
+*.zip
+*.gz
 
 # Container images
 *.sqsh

@@ -4,9 +4,52 @@ from torch import nn
 from torch.nn import functional as F
 from torch_geometric.nn import MessagePassing, global_mean_pool
 from torch_geometric.utils import degree, dense_to_sparse
-from torch_geometric.nn import ECConv
 from torch_scatter import scatter_add
 from utils.batch_utils import _make_block_diag
+
+# ECConv was removed in PyG 2.0+, so we implement it here
+class ECConv(MessagePassing):
+    """
+    Edge-Conditioned Convolution from PyG 1.x
+    Re-implemented for compatibility with PyG 2.x
+    
+    Based on: https://github.com/pyg-team/pytorch_geometric/blob/1.7.2/torch_geometric/nn/conv/ecc_conv.py
+    """
+    def __init__(self, in_channels, out_channels, nn, aggr='add', **kwargs):
+        super(ECConv, self).__init__(aggr=aggr, **kwargs)
+        self.in_channels = in_channels
+        self.out_channels = out_channels
+        self.nn = nn
+        self.reset_parameters()
+
+    def reset_parameters(self):
+        if hasattr(self.nn, 'reset_parameters'):
+            self.nn.reset_parameters()
+
+    def forward(self, x, edge_index, edge_attr):
+        # edge_attr should be a tensor of shape [num_edges] or [num_edges, 1]
+        if edge_attr.dim() == 1:
+            edge_attr = edge_attr.unsqueeze(-1)
+        elif edge_attr.dim() > 2:
+            edge_attr = edge_attr.view(-1, 1)
+        
+        # Generate weight matrices for each edge using the neural network
+        # nn outputs [num_edges, out_channels * in_channels]
+        weight = self.nn(edge_attr)  # [num_edges, out_channels * in_channels]
+        weight = weight.view(-1, self.out_channels, self.in_channels)  # [num_edges, out_channels, in_channels]
+        
+        # Get source node features: [num_edges, in_channels]
+        x_j = x[edge_index[1]]  # [num_edges, in_channels]
+        
+        # Apply weight matrices: [num_edges, out_channels, in_channels] @ [num_edges, in_channels, 1]
+        # Using einsum for clarity: 'eoi,ei->eo'
+        out = torch.einsum('eoi,ei->eo', weight, x_j)  # [num_edges, out_channels]
+        
+        # Aggregate messages
+        return self.propagate(edge_index, x=out, size=None)
+
+    def message(self, x_j):
+        return x_j
 
 
 class ECCLayer(nn.Module):
