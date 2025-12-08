@@ -1,7 +1,7 @@
 model:
   - GIN
 device:
-  - mps
+  - cuda
 last_layer_fa:
   - false
 batch_size:

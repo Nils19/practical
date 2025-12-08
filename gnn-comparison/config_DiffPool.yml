@@ -1,7 +1,7 @@
 model:
   - DiffPool
 device:
-  - cpu
+  - cuda
 batch_size:
   - 8
 last_layer_fa:

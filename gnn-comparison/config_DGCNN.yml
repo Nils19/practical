@@ -1,7 +1,7 @@
 model:
   - DGCNN
 device:
-  - cpu
+  - cuda
 batch_size:
   - 50
 last_layer_fa:

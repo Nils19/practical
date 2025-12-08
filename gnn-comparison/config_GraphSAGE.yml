@@ -1,7 +1,7 @@
 model:
   - GraphSAGE
 device:
-  - cpu
+  - cuda
 batch_size:
   - 32
 last_layer_fa:
