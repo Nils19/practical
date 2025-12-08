@@ -1,9 +1,9 @@
 model:
   - DeepMultisets
 device:
-  - cpu
+  - mps
 batch_size:
-  - 32
+  - 16
 hidden_units:
   - 32
   - 64

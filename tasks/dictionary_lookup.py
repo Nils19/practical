@@ -51,7 +51,8 @@ class DictionaryLookupDataset(TreeDataset):
 
     def label(self, combination):
         selected_key, values = combination
-        return int(values[selected_key - 1])
+        # Return 1-indexed label to match paper (labels 1 to num_leaves)
+        return int(values[selected_key - 1]) - 1
 
     def get_dims(self):
         # get input and output dims

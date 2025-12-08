@@ -62,15 +62,24 @@ class Experiment():
                 print(f"{arg}: {getattr(args, arg)}")
         print()
 
+    def worker_init_fn(self, worker_id):
+        """Worker initialization function for DataLoader multiprocessing."""
+        np.random.seed(self.seed + worker_id)
+        random.seed(self.seed + worker_id)
     def run(self):
         optimizer = torch.optim.Adam(self.model.parameters(), lr=0.001)
-        scheduler = ReduceLROnPlateau(optimizer, mode='max', threshold_mode='abs', factor=0.5, patience=10)
+        # Scheduler patience is in terms of evaluation cycles, not epochs
+        # We want 1000 epochs, so divide by eval_every
+        scheduler_patience = 1000 // self.eval_every
+        scheduler = ReduceLROnPlateau(optimizer, mode='max', threshold_mode='abs', factor=0.5, patience=scheduler_patience)
         print('Starting training')
 
         best_test_acc = 0.0
         best_train_acc = 0.0
         best_epoch = 0
-        epochs_no_improve = 0
+        epochs_since_improvement = 0  # Track actual epochs, not eval cycles
+        stopping_threshold = 0.0001
+        
         def worker_init_fn(worker_id):
             np.random.seed(self.seed + worker_id)
             random.seed(self.seed + worker_id)
@@ -106,51 +115,54 @@ class Experiment():
 
             test_acc = self.eval()
             cur_lr = [g["lr"] for g in optimizer.param_groups]
+            actual_epoch = epoch * self.eval_every
 
             new_best_str = ''
-            stopping_threshold = 0.0001
             stopping_value = 0
+            
             if self.stopping_criterion is STOP.TEST:
                 if test_acc > best_test_acc + stopping_threshold:
                     best_test_acc = test_acc
                     best_train_acc = train_acc
-                    best_epoch = epoch
-                    epochs_no_improve = 0
+                    best_epoch = actual_epoch
+                    epochs_since_improvement = 0
                     stopping_value = test_acc
                     new_best_str = ' (new best test)'
                 else:
-                    epochs_no_improve += 1
+                    epochs_since_improvement += self.eval_every
             elif self.stopping_criterion is STOP.TRAIN:
                 if train_acc > best_train_acc + stopping_threshold:
                     best_train_acc = train_acc
                     best_test_acc = test_acc
-                    best_epoch = epoch
-                    epochs_no_improve = 0
+                    best_epoch = actual_epoch
+                    epochs_since_improvement = 0
                     stopping_value = train_acc
                     new_best_str = ' (new best train)'
                 else:
-                    epochs_no_improve += 1
+                    epochs_since_improvement += self.eval_every
+                    
             print(
-                f'Epoch {epoch * self.eval_every}, LR: {cur_lr}: Train loss: {avg_training_loss:.7f}, Train acc: {train_acc:.4f}, Test accuracy: {test_acc:.4f}{new_best_str}')
+                f'Epoch {actual_epoch}, LR: {cur_lr}: Train loss: {avg_training_loss:.7f}, Train acc: {train_acc:.4f}, Test accuracy: {test_acc:.4f}{new_best_str}')
+            
+            # Stop if we've achieved perfect accuracy
             if stopping_value == 1.0:
                 break
-            if epochs_no_improve >= self.patience:
-                print(
-                    f'{self.patience} * {self.eval_every} epochs without {self.stopping_criterion} improvement, stopping. ')
+                
+            # Stop after 2000 actual epochs without improvement (as per paper)
+            if epochs_since_improvement >= 2000:
+                print(f'2000 epochs without {self.stopping_criterion} improvement, stopping.')
                 break
-        print(f'Best train acc: {best_train_acc}, epoch: {best_epoch * self.eval_every}')
+                
+        print(f'Best train acc: {best_train_acc}, epoch: {best_epoch}')
 
         return best_train_acc, best_test_acc, best_epoch
 
     def eval(self):
         self.model.eval()
         with torch.no_grad():
-            def worker_init_fn(worker_id):
-                np.random.seed(self.seed + worker_id)
-                random.seed(self.seed + worker_id)
             loader = DataLoader(self.X_test, batch_size=self.batch_size, shuffle=False,
                                 pin_memory=True, num_workers=self.loader_workers,
-                                worker_init_fn=worker_init_fn if self.loader_workers > 0 else None)
+                                worker_init_fn=self.worker_init_fn if self.loader_workers > 0 else None)
 
             total_correct = 0
             total_examples = 0

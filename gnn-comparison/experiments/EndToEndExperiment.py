@@ -21,7 +21,11 @@ class EndToEndExperiment(Experiment):
         if 'dense' in self.model_config:
             dataset = dataset_class(dense=self.model_config.dense)
         else:
-            dataset = dataset_class()
+            # ENZYMES requires use_node_attrs=True for correct feature dimensions
+            if self.model_config.dataset_name == 'ENZYMES':
+                dataset = dataset_class(use_node_attrs=True)
+            else:
+                dataset = dataset_class()
 
         model_class = self.model_config.model
         loss_class = self.model_config.loss
@@ -66,7 +70,11 @@ class EndToEndExperiment(Experiment):
         if 'dense' in self.model_config:
             dataset = dataset_class(dense=self.model_config.dense)
         else:
-            dataset = dataset_class()
+            # ENZYMES requires use_node_attrs=True for correct feature dimensions
+            if self.model_config.dataset_name == 'ENZYMES':
+                dataset = dataset_class(use_node_attrs=True)
+            else:
+                dataset = dataset_class()
 
         shuffle = self.model_config['shuffle'] if 'shuffle' in self.model_config else True
 

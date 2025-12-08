@@ -52,6 +52,9 @@ class KFoldAssessment:
         outer_TR_scores = np.array(outer_TR_scores)
         outer_TS_scores = np.array(outer_TS_scores)
 
+        if len(outer_TR_scores) == 0:
+            raise RuntimeError(f'No successful outer folds found in {self.__NESTED_FOLDER}. All outer folds failed.')
+
         assessment_results['avg_TR_score'] = outer_TR_scores.mean()
         assessment_results['std_TR_score'] = outer_TR_scores.std()
         assessment_results['avg_TS_score'] = outer_TS_scores.mean()

@@ -21,6 +21,8 @@ class HoldOutSelector:
     def process_results(self, HOLDOUT_MS_FOLDER, no_configurations):
 
         best_vl = 0.
+        best_i = None
+        best_config = None
 
         for i in range(1, no_configurations+1):
             try:
@@ -39,6 +41,9 @@ class HoldOutSelector:
 
             except Exception as e:
                 print(e)
+
+        if best_config is None:
+            raise RuntimeError(f'No successful configurations found in {HOLDOUT_MS_FOLDER}. All configurations failed.')
 
         print('Model selection winner for experiment', HOLDOUT_MS_FOLDER, 'is config ', best_i, ':')
         for k in best_config.keys():

@@ -34,8 +34,8 @@ class GraphModel(torch.nn.Module):
                 self.layer_norms.append(nn.LayerNorm(h_dim))
 
         self.out_dim = out_dim
-        # self.out_layer = nn.Linear(in_features=h_dim, out_features=out_dim, bias=False)
-        self.out_layer = nn.Linear(in_features=h_dim, out_features=out_dim + 1, bias=False)
+        # Use out_dim+1 to match 1-indexed labels (labels 1 to num_leaves map to outputs 0 to num_leaves)
+        self.out_layer = nn.Linear(in_features=h_dim, out_features=out_dim, bias=False)
 
     def forward(self, data):
         x, edge_index, batch, roots = data.x, data.edge_index, data.batch, data.root_mask
