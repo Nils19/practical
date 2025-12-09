@@ -150,7 +150,7 @@ class Experiment():
                 f'Epoch {actual_epoch}, LR: {cur_lr}: Train loss: {avg_training_loss:.7f}, Train acc: {train_acc:.4f}, Test accuracy: {test_acc:.4f}{new_best_str}')
             
             # Stop if we've achieved perfect accuracy
-            if stopping_value >= 0.99:  # Changed from == 1.0 to >= 0.99 for floating point comparison
+            if stopping_value >= 1.0:  # Changed from == 1.0 to >= 0.99 for floating point comparison
                 print(f'Achieved near-perfect accuracy ({stopping_value:.4f}), stopping.')
                 break
                 
