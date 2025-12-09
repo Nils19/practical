@@ -27,7 +27,7 @@ if __name__ == '__main__':
     task = Task.NEIGHBORS_MATCH
     gnn_type = GNN_TYPE.GAT
     stopping_criterion = STOP.TRAIN
-    min_depth = 4
+    min_depth = 2
     max_depth = 8
 
     results_all_depths = {}

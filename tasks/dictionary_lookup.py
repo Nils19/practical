@@ -43,7 +43,7 @@ class DictionaryLookupDataset(TreeDataset):
         for i in range(1, self.num_nodes):
             if i in self.leaf_indices:
                 leaf_num = self.leaf_indices.index(i)
-                node = (leaf_num+1, values[leaf_num])
+                node = (leaf_num+1, values[leaf_num] - 1) 
             else:
                 node = (0, 0)
             nodes.append(node)

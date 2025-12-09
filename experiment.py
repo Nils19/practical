@@ -66,6 +66,7 @@ class Experiment():
         """Worker initialization function for DataLoader multiprocessing."""
         np.random.seed(self.seed + worker_id)
         random.seed(self.seed + worker_id)
+        
     def run(self):
         optimizer = torch.optim.Adam(self.model.parameters(), lr=0.001)
         # Scheduler patience is in terms of evaluation cycles, not epochs
@@ -79,27 +80,31 @@ class Experiment():
         best_epoch = 0
         epochs_since_improvement = 0  # Track actual epochs, not eval cycles
         stopping_threshold = 0.0001
-        
-        def worker_init_fn(worker_id):
-            np.random.seed(self.seed + worker_id)
-            random.seed(self.seed + worker_id)
 
         for epoch in range(1, (self.max_epochs // self.eval_every) + 1):
             self.model.train()
             loader = DataLoader(self.X_train * self.eval_every, batch_size=self.batch_size, shuffle=True,
                                 pin_memory=True, num_workers=self.loader_workers,
-                                worker_init_fn=worker_init_fn if self.loader_workers > 0 else None)
+                                worker_init_fn=self.worker_init_fn if self.loader_workers > 0 else None)
 
             total_loss = 0
             total_num_examples = 0
             train_correct = 0
             optimizer.zero_grad()
+            
             for i, batch in enumerate(loader):
                 batch = batch.to(self.device)
                 out = self.model(batch)
                 loss = self.criterion(input=out, target=batch.y)
-                total_num_examples += batch.num_graphs
-                total_loss += (loss.item() * batch.num_graphs)
+                
+                # Count examples correctly for both tree tasks and NEIGHBORSMATCH
+                # For tree tasks: batch.num_graphs (one prediction per graph)
+                # For NEIGHBORSMATCH: batch.y.size(0) (one prediction per node)
+                num_examples = batch.y.size(0)
+                
+                total_num_examples += num_examples
+                total_loss += (loss.item() * num_examples)
+                
                 _, train_pred = out.max(dim=1)
                 train_correct += train_pred.eq(batch.y).sum().item()
 
@@ -145,7 +150,8 @@ class Experiment():
                 f'Epoch {actual_epoch}, LR: {cur_lr}: Train loss: {avg_training_loss:.7f}, Train acc: {train_acc:.4f}, Test accuracy: {test_acc:.4f}{new_best_str}')
             
             # Stop if we've achieved perfect accuracy
-            if stopping_value == 1.0:
+            if stopping_value >= 0.99:  # Changed from == 1.0 to >= 0.99 for floating point comparison
+                print(f'Achieved near-perfect accuracy ({stopping_value:.4f}), stopping.')
                 break
                 
             # Stop after 2000 actual epochs without improvement (as per paper)
@@ -153,7 +159,7 @@ class Experiment():
                 print(f'2000 epochs without {self.stopping_criterion} improvement, stopping.')
                 break
                 
-        print(f'Best train acc: {best_train_acc}, epoch: {best_epoch}')
+        print(f'Best train acc: {best_train_acc:.4f}, epoch: {best_epoch}')
 
         return best_train_acc, best_test_acc, best_epoch
 
@@ -168,7 +174,8 @@ class Experiment():
             total_examples = 0
             for batch in loader:
                 batch = batch.to(self.device)
-                _, pred = self.model(batch).max(dim=1)
+                out = self.model(batch)
+                _, pred = out.max(dim=1)
                 total_correct += pred.eq(batch.y).sum().item()
                 total_examples += batch.y.size(0)
             acc = total_correct / total_examples

@@ -6,22 +6,19 @@ from torch import nn
 from torch_geometric.nn import GCNConv, GatedGraphConv, GINConv, GATConv
 
 
+from tasks.neighbors_match import NeighborsMatchDataset  # Add this
+
 class Task(Enum):
     NEIGHBORS_MATCH = auto()
-
-    @staticmethod
-    def from_string(s):
-        try:
-            return Task[s]
-        except KeyError:
-            raise ValueError()
-
+    DICTIONARY_LOOKUP = auto()  # Add this so you can run both
+    
     def get_dataset(self, depth, train_fraction):
         if self is Task.NEIGHBORS_MATCH:
+            dataset = NeighborsMatchDataset(depth)  # Fix this!
+        elif self is Task.DICTIONARY_LOOKUP:
             dataset = DictionaryLookupDataset(depth)
         else:
             dataset = None
-
         return dataset.generate_data(train_fraction)
 
 
